@@ -1,0 +1,43 @@
+name: cpp-cmake-mingw-prebuilt-release-actions-workflow
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  test:
+    runs-on: windows-latest
+    env:
+      targetZip: tinygoexample.js-${{ github.ref_name }}-tinygo-0.28.1-arduino.zip
+    steps:
+      - uses: actions/checkout@v3
+      
+      - shell: cmd
+        run: | 
+          cd /d "%TEMP%" &&^
+          curl https://github.com/tinygo-org/tinygo/releases/download/v0.28.1/tinygo0.28.1.windows-amd64.zip -L -O -J &&^ 
+          7z  x tinygo0.28.1.windows-amd64.zip -o"%USERPROFILE%\Downloads"
+          
+      - name: Build
+        shell: cmd
+        run: |
+          set PATH=^
+          %PATH%;^
+          %USERPROFILE%\Downloads\tinygo\bin;
+          tinygo build -o main.hex -size=short -target=arduino 
+          
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: 'zip'
+          path: |
+            main.hex
+          filename: "${{ env.targetZip }}"
+          
+      - name: Release prebuilt
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "${{ env.targetZip }}"
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
